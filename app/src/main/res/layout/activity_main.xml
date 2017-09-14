@@ -34,10 +34,16 @@ limitations under the License.
         android:layout_height="wrap_content"
         android:text="0"
         android:layout_below="@id/title_text_view"/>
+    <Button
+        android:id="@+id/walk_button"
+        android:layout_width="match_parent"
+        android:layout_height="50dp"
+        android:layout_below="@id/step_count"
+        android:text="Start Walk"/>
     <ScrollView
         android:layout_width="fill_parent"
         android:layout_height="fill_parent"
-        android:layout_below="@id/step_count">
+        android:layout_below="@id/walk_button">
         <com.google.android.gms.fit.samples.common.logger.LogView
             android:id="@+id/sample_logview"
             android:layout_width="wrap_content"

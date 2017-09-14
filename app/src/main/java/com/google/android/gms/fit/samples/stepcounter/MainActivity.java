@@ -24,6 +24,8 @@ import android.support.design.widget.Snackbar;
 import android.support.v7.app.AppCompatActivity;
 import android.view.Menu;
 import android.view.MenuItem;
+import android.view.View;
+import android.widget.Button;
 import android.widget.TextView;
 
 import com.google.android.gms.auth.api.signin.GoogleSignInOptions;
@@ -72,6 +74,8 @@ public class MainActivity extends AppCompatActivity {
     private long startTimeSeconds = getCurrentTime(),endTimeSeconds = getCurrentTime();
     private TextView mStepView;
     private OnDataPointListener mListener;
+    private Button mWalkButton;
+    private boolean bClicked = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -79,12 +83,59 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
 
         mStepView = (TextView) findViewById(R.id.step_count);
+        mWalkButton = (Button) findViewById(R.id.walk_button);
+
+        mWalkButton.setOnClickListener(new View.OnClickListener() {
+            @Override
+            public void onClick(View v) {
+                if(bClicked){
+                    stopWalk();
+                    SharedPref.write(getApplicationContext(),"steps",steps);
+                    SharedPref.write(getApplicationContext(),"walk","stopped");
+                    SharedPref.write(getApplicationContext(), "initialtime", 1L);
+                    unregisterFitnessDataListener();
+                } else {
+                    startWalk();
+                    firststeps = SharedPref.readInt(getApplicationContext(),"steps");
+                    steps = 0;
+                    SharedPref.write(getApplicationContext(),"walk","started");
+                    stepCountSensor();
+                }
+            }
+        });
+
+        renderButton();
 
         // This method sets up our custom logger, which will print all log messages to the device
         // screen, as well as to adb logcat.
         initializeLogging();
 
         buildFitnessClient();
+    }
+
+    public void renderButton() {
+        String walkState = SharedPref.read(getApplicationContext(),"walk");
+
+        if(walkState != null){
+            switch (walkState){
+                case "started":
+                    startWalk();
+                    break;
+                case "stopped":
+                    stopWalk();
+                    break;
+            }
+        }
+    }
+
+    public void stopWalk(){
+        mWalkButton.setText("Start Walk");
+        bClicked = false;
+    }
+
+    public void startWalk(){
+        mWalkButton.setText("Stop Walk");
+        bClicked = true;
     }
 
     @Override
@@ -200,7 +251,7 @@ public class MainActivity extends AppCompatActivity {
                 mClient,
                 new SensorRequest.Builder()
                         .setDataType(DataType.TYPE_STEP_COUNT_DELTA)
-                        .setSamplingRate(3, TimeUnit.SECONDS)
+                        .setSamplingRate(500, TimeUnit.MILLISECONDS)
                         .build(),
                 mListener
                 );
@@ -248,7 +299,9 @@ public class MainActivity extends AppCompatActivity {
                     }
 
                     Log.d(TAG, String.format("startAtSeconds %s, steps %s", startAtSeconds, firststeps));
-                    stepCountSensor();
+                    if(bClicked){
+                        stepCountSensor();
+                    }
                 }
             }
         });
@@ -326,12 +379,13 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
-    protected void onStop() {
-        super.onStop();
+    protected void onPause() {
+        super.onPause();
         unregisterFitnessDataListener();
-        Log.i(TAG, "onStop");
-        SharedPref.write(getApplicationContext(),"initialtime",getCurrentTime());
-        SharedPref.write(getApplicationContext(),"steps",steps);
+        if(bClicked) {
+            SharedPref.write(getApplicationContext(), "initialtime", getCurrentTime());
+            SharedPref.write(getApplicationContext(), "steps", steps);
+        }
     }
 
     @Override
